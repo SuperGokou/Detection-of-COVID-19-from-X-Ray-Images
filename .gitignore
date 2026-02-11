@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Model weight files (large binaries)
+trained_models/*.h5
+trained_models/*.weights.h5
+
+# OS
+.DS_Store
+Thumbs.db
