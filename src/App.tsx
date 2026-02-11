@@ -56,18 +56,25 @@ export default function App() {
     imageFile,
     currentConfig,
     isBusy,
+    heatmapCanvas,
+    showHeatmap,
+    heatmapLoading,
     handleModelChange,
     handleFileSelect,
     handleSampleImage,
+    handleToggleHeatmap,
   } = useClassifier();
 
   const imageDisplayRef = useRef<HTMLDivElement>(null);
 
-  // Show the CLAHE-processed canvas (or original) in the visualization panel
+  // Show the appropriate canvas: heatmap overlay when active, else CLAHE/original
   useEffect(() => {
     if (imageDisplayRef.current) {
       imageDisplayRef.current.innerHTML = "";
-      const canvas = claheCanvas || originalCanvas;
+      const canvas =
+        showHeatmap && heatmapCanvas
+          ? heatmapCanvas
+          : claheCanvas || originalCanvas;
       if (canvas) {
         const clone = document.createElement("canvas");
         clone.width = canvas.width;
@@ -78,7 +85,7 @@ export default function App() {
         imageDisplayRef.current.appendChild(clone);
       }
     }
-  }, [originalCanvas, claheCanvas]);
+  }, [originalCanvas, claheCanvas, showHeatmap, heatmapCanvas]);
 
   const hasImage = !!originalCanvas;
   const isAnalyzing =
@@ -207,10 +214,27 @@ export default function App() {
                       {imageFile ? imageFile.name : "No file selected"}
                     </span>
                     <div className="flex items-center gap-2 shrink-0">
+                      {heatmapLoading && (
+                        <Loader2 className="size-4 text-[#a51c30] animate-spin" />
+                      )}
                       <span className="text-sm text-[#364153] whitespace-nowrap">Show Heatmap (Grad-CAM)</span>
-                      <div className="w-11 h-6 bg-[#d1d5dc] rounded-full opacity-50 relative cursor-not-allowed">
-                        <div className="absolute left-1 top-1 size-4 bg-white rounded-full shadow-sm" />
-                      </div>
+                      <button
+                        onClick={handleToggleHeatmap}
+                        disabled={!result || heatmapLoading}
+                        className={`w-11 h-6 rounded-full relative transition-colors ${
+                          !result
+                            ? "bg-[#d1d5dc] opacity-50 cursor-not-allowed"
+                            : showHeatmap
+                              ? "bg-[#a51c30] cursor-pointer"
+                              : "bg-[#d1d5dc] cursor-pointer hover:bg-[#b0b5be]"
+                        }`}
+                      >
+                        <div
+                          className={`absolute top-1 size-4 bg-white rounded-full shadow-sm transition-[left] ${
+                            showHeatmap ? "left-6" : "left-1"
+                          }`}
+                        />
+                      </button>
                     </div>
                   </div>
                 </div>

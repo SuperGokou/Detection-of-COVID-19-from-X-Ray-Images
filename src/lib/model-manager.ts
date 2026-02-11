@@ -11,6 +11,8 @@ export interface ModelConfig {
   colorMode: "grayscale" | "rgb";
   inputShape: [number, number, number, number];
   estimatedSizeMB: number;
+  /** Layer name to use as Grad-CAM target (last conv layer before GAP) */
+  gradCamTargetLayer: string;
 }
 
 export const MODEL_CONFIGS: Record<string, ModelConfig> = {
@@ -23,6 +25,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     colorMode: "grayscale",
     inputShape: [1, 224, 224, 1],
     estimatedSizeMB: 2.7,
+    gradCamTargetLayer: "activation_3", // Last ReLU before GAP (14x14x256)
   },
   densenet121: {
     id: "densenet121",
@@ -33,6 +36,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     colorMode: "rgb",
     inputShape: [1, 224, 224, 3],
     estimatedSizeMB: 15,
+    gradCamTargetLayer: "relu", // Final activation before GAP (7x7x1024)
   },
   resnet50: {
     id: "resnet50",
@@ -43,6 +47,7 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     colorMode: "rgb",
     inputShape: [1, 224, 224, 3],
     estimatedSizeMB: 50,
+    gradCamTargetLayer: "conv5_block3_out", // Last residual block (7x7x2048)
   },
 };
 
@@ -58,7 +63,7 @@ export interface PredictionResult {
 type ProgressCallback = (progress: number) => void;
 
 class ModelManager {
-  private loadedModels: Map<string, tf.GraphModel> = new Map();
+  private loadedModels: Map<string, tf.LayersModel> = new Map();
 
   /**
    * Check if a model is already loaded and cached.
@@ -89,7 +94,7 @@ class ModelManager {
     const basePath = import.meta.env.BASE_URL;
     const modelUrl = `${basePath}${config.path}`;
 
-    const model = await tf.loadGraphModel(modelUrl, {
+    const model = await tf.loadLayersModel(modelUrl, {
       onProgress: (fraction) => {
         onProgress?.(fraction);
       },
@@ -141,6 +146,13 @@ class ModelManager {
     } finally {
       inputTensor.dispose();
     }
+  }
+
+  /**
+   * Get the underlying LayersModel instance for direct access (e.g. Grad-CAM).
+   */
+  getModel(modelId: string): tf.LayersModel | undefined {
+    return this.loadedModels.get(modelId);
   }
 
   /**

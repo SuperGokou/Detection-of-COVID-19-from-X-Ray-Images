@@ -46,7 +46,6 @@ _candidates = [
 ]
 WEIGHTS_DIR = next((d for d in _candidates if os.path.isdir(d)), _candidates[0])
 OUTPUT_BASE = os.path.join(PROJECT_ROOT, "public", "models")
-SAVEDMODEL_TEMP = os.path.join(PROJECT_ROOT, "temp_savedmodels")
 
 IMAGE_SIZE = 224
 
@@ -175,11 +174,10 @@ MODEL_SPECS = [
 
 
 def convert_model(spec):
-    """Convert a single model to TF.js format."""
+    """Convert a single model to TF.js layers model format."""
     name = spec["name"]
     weight_path = os.path.join(WEIGHTS_DIR, spec["weight_file"])
     output_dir = os.path.join(OUTPUT_BASE, spec["output_dir"])
-    savedmodel_dir = os.path.join(SAVEDMODEL_TEMP, spec["output_dir"])
 
     print(f"\n{'='*60}")
     print(f"Converting {name}")
@@ -199,20 +197,12 @@ def convert_model(spec):
     print(f"  Loading weights from: {weight_path}")
     model.load_weights(weight_path)
 
-    # Export as SavedModel
-    print(f"  Exporting SavedModel to: {savedmodel_dir}")
-    os.makedirs(savedmodel_dir, exist_ok=True)
-    model.export(savedmodel_dir)
-
-    # Convert to TF.js with float16 quantization
-    print(f"  Converting to TF.js (float16) -> {output_dir}")
+    # Convert directly to TF.js layers model
+    print(f"  Converting to TF.js layers model -> {output_dir}")
     os.makedirs(output_dir, exist_ok=True)
 
-    from tensorflowjs.converters import tf_saved_model_conversion_v2
-    tf_saved_model_conversion_v2.convert_tf_saved_model(
-        savedmodel_dir,
-        output_dir,
-    )
+    from tensorflowjs.converters.keras_h5_conversion import save_keras_model
+    save_keras_model(model, output_dir)
 
     # Report output size
     total_size = 0
@@ -242,17 +232,11 @@ def main():
         sys.exit(1)
 
     os.makedirs(OUTPUT_BASE, exist_ok=True)
-    os.makedirs(SAVEDMODEL_TEMP, exist_ok=True)
 
     results = []
     for spec in MODEL_SPECS:
         success = convert_model(spec)
         results.append((spec["name"], success))
-
-    # Cleanup temp SavedModel directory
-    if os.path.exists(SAVEDMODEL_TEMP):
-        shutil.rmtree(SAVEDMODEL_TEMP)
-        print(f"\nCleaned up temp directory: {SAVEDMODEL_TEMP}")
 
     # Summary
     print(f"\n{'='*60}")
