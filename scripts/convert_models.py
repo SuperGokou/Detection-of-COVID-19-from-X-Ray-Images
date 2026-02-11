@@ -77,14 +77,13 @@ def _downgrade_keras3_topology(output_dir):
         if obj.get("class_name") == "Functional":
             obj["class_name"] = "Model"
 
-        # Keras 3 serializes L1/L2 as separate classes, but TF.js only knows
-        # "L1L2". Convert back to the Keras 2 combined format.
-        if obj.get("class_name") in ("L1", "l1"):
-            cfg = obj.get("config", {})
-            return {"class_name": "L1L2", "config": {"l1": cfg.get("l1", 0), "l2": 0}}
-        if obj.get("class_name") in ("L2", "l2"):
-            cfg = obj.get("config", {})
-            return {"class_name": "L1L2", "config": {"l1": 0, "l2": cfg.get("l2", 0)}}
+        # Strip regularizers entirely -- they are only used during training
+        # and TF.js does not need them for inference. This avoids Keras 3
+        # class name incompatibilities (L2 vs l2 vs L1L2).
+        for reg_key in ("kernel_regularizer", "bias_regularizer",
+                        "activity_regularizer"):
+            if reg_key in obj and obj[reg_key] is not None:
+                obj[reg_key] = None
 
         cleaned = {}
         for k, v in obj.items():
