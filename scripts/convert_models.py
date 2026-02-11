@@ -205,14 +205,12 @@ def convert_model(spec):
     print(f"  Converting to TF.js (float16) -> {output_dir}")
     os.makedirs(output_dir, exist_ok=True)
 
-    subprocess.run([
-        sys.executable, "-m", "tensorflowjs_converter",
-        "--input_format=tf_saved_model",
-        "--output_format=tfjs_graph_model",
-        "--quantize_float16",
+    from tensorflowjs.converters import tf_saved_model_conversion_v2
+    tf_saved_model_conversion_v2.convert_tf_saved_model(
         savedmodel_dir,
         output_dir,
-    ], check=True)
+        quantization_dtype_map=tf.float16,
+    )
 
     # Report output size
     total_size = 0
