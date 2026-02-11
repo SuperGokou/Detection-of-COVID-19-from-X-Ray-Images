@@ -32,6 +32,13 @@ export function useClassifier() {
         setErrorMessage("");
         setResult(null);
 
+        // Preprocess first so the image displays even if model loading fails
+        setAppState("preprocessing");
+        const config = MODEL_CONFIGS[selectedModel]!;
+        const preprocessed = await preprocessImage(file, config.colorMode);
+        setOriginalCanvas(preprocessed.originalCanvas);
+        setClaheCanvas(preprocessed.claheCanvas);
+
         if (!modelManager.isLoaded(selectedModel)) {
           setAppState("loading-model");
           setLoadProgress(0);
@@ -39,12 +46,6 @@ export function useClassifier() {
             setLoadProgress(Math.round(progress * 100));
           });
         }
-
-        setAppState("preprocessing");
-        const config = MODEL_CONFIGS[selectedModel]!;
-        const preprocessed = await preprocessImage(file, config.colorMode);
-        setOriginalCanvas(preprocessed.originalCanvas);
-        setClaheCanvas(preprocessed.claheCanvas);
 
         setAppState("analyzing");
         const prediction = await modelManager.predict(

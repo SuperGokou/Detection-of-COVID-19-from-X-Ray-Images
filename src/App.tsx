@@ -202,12 +202,12 @@ export default function App() {
                       </div>
                     )}
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-sm text-[#6a7282] font-mono">
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <span className="text-sm text-[#6a7282] font-mono min-w-0 truncate">
                       {imageFile ? imageFile.name : "No file selected"}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-[#364153]">Show Heatmap (Grad-CAM)</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-sm text-[#364153] whitespace-nowrap">Show Heatmap (Grad-CAM)</span>
                       <div className="w-11 h-6 bg-[#d1d5dc] rounded-full opacity-50 relative cursor-not-allowed">
                         <div className="absolute left-1 top-1 size-4 bg-white rounded-full shadow-sm" />
                       </div>
