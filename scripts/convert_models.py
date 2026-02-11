@@ -102,12 +102,71 @@ def _downgrade_keras3_topology(output_dir):
     if "keras_version" in data.get("modelTopology", {}):
         data["modelTopology"]["keras_version"] = "2.15.0"
 
+    # ---- Convert Keras 3 inbound_nodes to Keras 2 format ----
+    # Keras 3: [{"args": [__keras_tensor__], "kwargs": {}}]
+    # Keras 2: [[[layer_name, node_index, tensor_index, {}]]]
+    def _extract_tensors(arg):
+        """Recursively extract __keras_tensor__ history tuples from an arg."""
+        if isinstance(arg, dict):
+            if arg.get("class_name") == "__keras_tensor__":
+                h = arg.get("config", {}).get("keras_history", [])
+                if len(h) >= 3:
+                    return [[h[0], h[1], h[2], {}]]
+            return []
+        if isinstance(arg, list):
+            result = []
+            for item in arg:
+                result.extend(_extract_tensors(item))
+            return result
+        return []
+
+    def _convert_inbound_nodes(nodes):
+        """Convert Keras 3 inbound_nodes list to Keras 2 format."""
+        if not nodes or not isinstance(nodes, list):
+            return nodes
+        # If first element is already a list, it's Keras 2 format
+        if nodes and isinstance(nodes[0], list):
+            return nodes
+        # Keras 3 format: list of dicts with args/kwargs
+        converted = []
+        for node in nodes:
+            if not isinstance(node, dict) or "args" not in node:
+                continue
+            connections = _extract_tensors(node.get("args", []))
+            if connections:
+                converted.append(connections)
+        return converted
+
+    def _fix_functional_layers(config):
+        """Fix inbound_nodes, input_layers, output_layers for Functional models."""
+        if not isinstance(config, dict):
+            return
+        # Fix layers
+        for layer in config.get("layers", []):
+            if "inbound_nodes" in layer:
+                layer["inbound_nodes"] = _convert_inbound_nodes(
+                    layer["inbound_nodes"]
+                )
+            # Recurse into nested model configs (e.g. base model inside wrapper)
+            nested = layer.get("config", {})
+            if isinstance(nested, dict) and "layers" in nested:
+                _fix_functional_layers(nested)
+
+        # Fix input_layers / output_layers: wrap bare tuple in list
+        # Keras 3: ["input_layer_1", 0, 0]  ->  Keras 2: [["input_layer_1", 0, 0]]
+        for key in ("input_layers", "output_layers"):
+            val = config.get(key)
+            if isinstance(val, list) and val and not isinstance(val[0], list):
+                config[key] = [val]
+
+    model_config = (data.get("modelTopology", {})
+                        .get("model_config", {})
+                        .get("config", {}))
+    _fix_functional_layers(model_config)
+
     # Strip model name prefix from weight names (Keras 3 Sequential models
     # add the model name, but TF.js expects bare layer_name/weight_name).
-    model_name = (data.get("modelTopology", {})
-                      .get("model_config", {})
-                      .get("config", {})
-                      .get("name", ""))
+    model_name = model_config.get("name", "")
     if model_name:
         prefix = model_name + "/"
         for group in data.get("weightsManifest", []):
