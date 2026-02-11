@@ -1,5 +1,5 @@
 """
-Convert trained Keras models to TensorFlow.js graph model format.
+Convert trained Keras models to TensorFlow.js layers model format.
 
 Usage:
     cd Web
@@ -9,9 +9,10 @@ Usage:
 This script:
 1. Rebuilds each model architecture exactly as in covid19_run.py
 2. Loads trained weights (searches trained_models/, ../models/, ../models_polished/)
-3. Exports as SavedModel format
-4. Converts to TF.js graph model with float16 quantization
-5. Outputs to public/models/{custom-cnn,densenet121,resnet50}/
+3. Converts to TF.js layers model via save_keras_model()
+4. Outputs to public/models/{custom-cnn,densenet121,resnet50}/
+
+Layers model format is required for Grad-CAM (needs gradient + layer access).
 
 Weight file naming convention (from get_callbacks in covid19_run.py):
     best_{model_name}.weights.h5
@@ -22,8 +23,6 @@ Weight file naming convention (from get_callbacks in covid19_run.py):
 
 import os
 import sys
-import shutil
-import subprocess
 
 # Add project root to path so we can potentially reuse code
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -34,6 +33,10 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 from tensorflow.keras import layers, models
 from tensorflow.keras.applications import DenseNet121, ResNet50
+
+# Monkey-patch tensorflowjs version check to work with Keras 3
+import tensorflowjs.converters.keras_h5_conversion as _keras_h5
+_keras_h5._check_version = lambda h5file: None
 
 # Look for weights in multiple locations
 _candidates = [
