@@ -209,7 +209,6 @@ def convert_model(spec):
     tf_saved_model_conversion_v2.convert_tf_saved_model(
         savedmodel_dir,
         output_dir,
-        quantization_dtype_map=tf.float16,
     )
 
     # Report output size
