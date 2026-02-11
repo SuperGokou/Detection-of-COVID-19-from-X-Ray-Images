@@ -50,6 +50,56 @@ OUTPUT_BASE = os.path.join(PROJECT_ROOT, "public", "models")
 IMAGE_SIZE = 224
 
 
+def _downgrade_keras3_topology(output_dir):
+    """Post-process model.json to convert Keras 3 topology to Keras 2 format.
+
+    TF.js loadLayersModel expects Keras 2 config structure. Keras 3 adds
+    'module', 'registered_name' fields and wraps dtype in DTypePolicy objects
+    that TF.js cannot parse. This walks the entire topology tree and strips
+    those fields so the model loads correctly in the browser.
+    """
+    import json
+    model_json_path = os.path.join(output_dir, "model.json")
+    with open(model_json_path, "r") as f:
+        data = json.load(f)
+
+    def _clean(obj):
+        if isinstance(obj, list):
+            return [_clean(v) for v in obj]
+        if not isinstance(obj, dict):
+            return obj
+
+        # DTypePolicy -> simple string
+        if obj.get("class_name") == "DTypePolicy" and "config" in obj:
+            return obj["config"].get("name", "float32")
+
+        # Keras 3 "Functional" -> Keras 2 "Model"
+        if obj.get("class_name") == "Functional":
+            obj["class_name"] = "Model"
+
+        cleaned = {}
+        for k, v in obj.items():
+            # Strip Keras 3-only fields
+            if k in ("module", "registered_name", "optional"):
+                continue
+            # Keras 3 "batch_shape" -> Keras 2 "batch_input_shape"
+            if k == "batch_shape":
+                cleaned["batch_input_shape"] = _clean(v)
+                continue
+            cleaned[k] = _clean(v)
+        return cleaned
+
+    data["modelTopology"] = _clean(data["modelTopology"])
+    # Override keras_version so TF.js doesn't complain
+    if "keras_version" in data.get("modelTopology", {}):
+        data["modelTopology"]["keras_version"] = "2.15.0"
+
+    with open(model_json_path, "w") as f:
+        json.dump(data, f)
+
+    print(f"  Post-processed model.json (Keras 3 -> Keras 2 topology)")
+
+
 def build_custom_cnn(input_shape=(224, 224, 1)):
     """Build a custom CNN for binary classification.
     Exact copy from covid19_run.py lines 635-678."""
@@ -203,6 +253,9 @@ def convert_model(spec):
 
     from tensorflowjs.converters.keras_h5_conversion import save_keras_model
     save_keras_model(model, output_dir)
+
+    # Fix Keras 3 topology for TF.js compatibility
+    _downgrade_keras3_topology(output_dir)
 
     # Report output size
     total_size = 0

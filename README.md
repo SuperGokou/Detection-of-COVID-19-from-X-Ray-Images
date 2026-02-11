@@ -273,10 +273,7 @@ All models evaluated on the **CovidGR external test set** (852 images, never see
 | **DenseNet121** | **57.63%** | **1.2307** | **0.602** |
 | ResNet50 | 51.88% | 1.3125 | 0.543 |
 
-> **Note:** The gap between validation (up to 94%) and test (up to 58%) performance reflects the
-> domain shift between training sources (Italian/American hospitals) and the external test set
-> (Spanish hospitals). This is expected in cross-hospital medical imaging and motivates the CLAHE
-> preprocessing strategy. DenseNet121 shows the strongest generalization.
+> **Why is test accuracy so much lower than validation accuracy?** See the [analysis below](#why-test-accuracy-is-low).
 
 ### Model Performance Comparison
 
@@ -341,6 +338,20 @@ Each model's confusion matrix and ROC curve on the CovidGR test set:
            P       0.56      0.17      0.26       426
     accuracy                           0.52       852
 ```
+
+### Why Test Accuracy Is Low
+
+The models achieve up to 94% validation accuracy but only 50-58% on the external test set (barely above random chance for a binary task). This is not a bug -- it is the central finding of the project. The drop is caused by **domain shift**: systematic differences between the hospitals that produced the training data and the hospital that produced the test data.
+
+**1. Different hospitals, different images.** The training positives come from Italian hospitals (Brixia), the training negatives come from an American hospital (NIH), and the test set comes from Spanish hospitals (CovidGR). Each institution uses different X-ray machines, imaging protocols, patient positioning, and post-processing pipelines. The model learns these institution-specific visual patterns instead of (or in addition to) the actual COVID-19 pathology.
+
+**2. The model may be learning "which hospital" rather than "which disease."** During training, all positive images come from one source and all negatives from another. A model can achieve high validation accuracy simply by detecting whether an image looks like a Brixia X-ray or a NIH X-ray -- without learning anything about COVID-19. When the test images come from a third hospital (CovidGR) that looks like neither, this shortcut fails completely.
+
+**3. Measurable pixel-level differences confirm the shift.** The mean pixel intensities differ across sources (Brixia: 107.4, NIH: 133.3, CovidGR: 133.4). Even after CLAHE normalization, the underlying imaging characteristics (noise patterns, contrast curves, field-of-view) remain distinct enough for a CNN to exploit.
+
+**4. The Custom CNN is most affected.** It trains from scratch on a small dataset and has no pre-learned visual features to fall back on. It converges to a hospital-detection shortcut and achieves exactly 50% on the external test set (random guessing). The transfer learning models (DenseNet121, ResNet50) partially resist this because ImageNet pre-training provides general visual features that transfer better across domains.
+
+**5. This is a known challenge in medical AI.** Cross-hospital generalization failure is widely documented in radiology AI literature. Published solutions include: training on multi-site data where each site contains both classes, domain adaptation techniques, and larger and more diverse datasets. Our CLAHE preprocessing is a first step but is insufficient on its own to close the gap.
 
 ---
 

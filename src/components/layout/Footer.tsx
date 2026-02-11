@@ -6,10 +6,10 @@ export function Footer() {
       <div className="px-8 py-8 flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <p className="text-sm text-[#6a7282]">
-            &copy; 2026 Harvard University &amp; Collaborating Institution. All rights reserved.
+            &copy; 2024 Harvard University &amp; Class COMPSCI 1090B.
           </p>
           <p className="text-sm text-[#6a7282]">
-            Version 2.4.0-alpha &bull; Build 8921
+            Version 1.0.0
           </p>
         </div>
         <div className="flex items-center gap-6">
