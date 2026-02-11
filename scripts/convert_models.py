@@ -77,6 +77,13 @@ def _downgrade_keras3_topology(output_dir):
         if obj.get("class_name") == "Functional":
             obj["class_name"] = "Model"
 
+        # Keras 3 uppercase class names -> Keras 2 lowercase
+        # Regularizers: L1, L2, L1L2 -> l1, l2, l1_l2
+        # Initializers: Zeros, Ones, GlorotUniform, etc. are fine (TF.js knows both)
+        _reg_map = {"L1": "l1", "L2": "l2", "L1L2": "l1_l2"}
+        if obj.get("class_name") in _reg_map:
+            obj["class_name"] = _reg_map[obj["class_name"]]
+
         cleaned = {}
         for k, v in obj.items():
             # Strip Keras 3-only fields
