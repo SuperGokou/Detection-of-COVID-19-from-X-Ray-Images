@@ -77,12 +77,14 @@ def _downgrade_keras3_topology(output_dir):
         if obj.get("class_name") == "Functional":
             obj["class_name"] = "Model"
 
-        # Keras 3 uppercase class names -> Keras 2 lowercase
-        # Regularizers: L1, L2, L1L2 -> l1, l2, l1_l2
-        # Initializers: Zeros, Ones, GlorotUniform, etc. are fine (TF.js knows both)
-        _reg_map = {"L1": "l1", "L2": "l2", "L1L2": "l1_l2"}
-        if obj.get("class_name") in _reg_map:
-            obj["class_name"] = _reg_map[obj["class_name"]]
+        # Keras 3 serializes L1/L2 as separate classes, but TF.js only knows
+        # "L1L2". Convert back to the Keras 2 combined format.
+        if obj.get("class_name") in ("L1", "l1"):
+            cfg = obj.get("config", {})
+            return {"class_name": "L1L2", "config": {"l1": cfg.get("l1", 0), "l2": 0}}
+        if obj.get("class_name") in ("L2", "l2"):
+            cfg = obj.get("config", {})
+            return {"class_name": "L1L2", "config": {"l1": 0, "l2": cfg.get("l2", 0)}}
 
         cleaned = {}
         for k, v in obj.items():
