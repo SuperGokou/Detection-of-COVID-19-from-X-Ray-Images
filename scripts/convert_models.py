@@ -102,6 +102,19 @@ def _downgrade_keras3_topology(output_dir):
     if "keras_version" in data.get("modelTopology", {}):
         data["modelTopology"]["keras_version"] = "2.15.0"
 
+    # Strip model name prefix from weight names (Keras 3 Sequential models
+    # add the model name, but TF.js expects bare layer_name/weight_name).
+    model_name = (data.get("modelTopology", {})
+                      .get("model_config", {})
+                      .get("config", {})
+                      .get("name", ""))
+    if model_name:
+        prefix = model_name + "/"
+        for group in data.get("weightsManifest", []):
+            for w in group.get("weights", []):
+                if w["name"].startswith(prefix):
+                    w["name"] = w["name"][len(prefix):]
+
     with open(model_json_path, "w") as f:
         json.dump(data, f)
 
