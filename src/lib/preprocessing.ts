@@ -9,6 +9,8 @@
  *   RGB: RGB->YUV, CLAHE on Y channel, YUV->RGB
  */
 
+import { loadOpenCV } from "./opencv-loader";
+
 declare const cv: any;
 
 const IMG_SIZE = 224;
@@ -25,29 +27,12 @@ export interface PreprocessingResult {
 }
 
 /**
- * Wait for OpenCV.js to be ready.
+ * Wait for OpenCV.js to be ready. Delegates to the self-hosted loader, which
+ * injects the script (base-path aware) and resolves once the WASM runtime is
+ * initialized.
  */
 export function waitForOpenCV(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (typeof cv !== "undefined" && cv.Mat) {
-      resolve();
-      return;
-    }
-
-    // OpenCV.js sets cv.onRuntimeInitialized when loaded via script tag
-    const checkInterval = setInterval(() => {
-      if (typeof cv !== "undefined" && cv.Mat) {
-        clearInterval(checkInterval);
-        resolve();
-      }
-    }, 100);
-
-    // Timeout after 30 seconds
-    setTimeout(() => {
-      clearInterval(checkInterval);
-      reject(new Error("OpenCV.js failed to load within 30 seconds"));
-    }, 30000);
-  });
+  return loadOpenCV();
 }
 
 /**

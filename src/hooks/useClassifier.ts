@@ -18,6 +18,7 @@ export function useClassifier() {
     null,
   );
   const [opencvReady, setOpencvReady] = useState(false);
+  const [opencvError, setOpencvError] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   // Grad-CAM state
@@ -37,8 +38,16 @@ export function useClassifier() {
 
   useEffect(() => {
     waitForOpenCV()
-      .then(() => setOpencvReady(true))
-      .catch(() => setOpencvReady(false));
+      .then(() => {
+        setOpencvReady(true);
+        setOpencvError(null);
+      })
+      .catch((err) => {
+        setOpencvReady(false);
+        setOpencvError(
+          err instanceof Error ? err.message : "OpenCV.js failed to load",
+        );
+      });
   }, []);
 
   const runAnalysis = useCallback(
@@ -207,6 +216,7 @@ export function useClassifier() {
     originalCanvas,
     claheCanvas,
     opencvReady,
+    opencvError,
     imageFile,
     currentConfig,
     isBusy,

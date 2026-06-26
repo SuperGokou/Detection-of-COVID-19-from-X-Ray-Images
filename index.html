@@ -5,7 +5,9 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🫁</text></svg>" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>COVID-19 Chest X-Ray Classifier</title>
-    <script async src="https://docs.opencv.org/4.10.0/opencv.js" type="text/javascript"></script>
+    <!-- OpenCV.js is self-hosted in public/opencv/ and loaded at runtime by
+         src/lib/opencv-loader.ts (base-path aware). It is no longer pulled
+         from the docs.opencv.org CDN, whose pinned versions get pruned. -->
   </head>
   <body>
     <div id="root"></div>

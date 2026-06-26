@@ -53,6 +53,7 @@ export default function App() {
     originalCanvas,
     claheCanvas,
     opencvReady,
+    opencvError,
     imageFile,
     currentConfig,
     isBusy,
@@ -325,8 +326,17 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* OpenCV Loading */}
-                  {!opencvReady && appState === "idle" && (
+                  {/* OpenCV load error — shown whenever the load failed and
+                      OpenCV is not ready, independent of appState. */}
+                  {!opencvReady && opencvError && (
+                    <div className="mt-4 text-center max-w-[280px]">
+                      <AlertTriangle className="size-5 mx-auto text-red-500 mb-1" />
+                      <p className="text-xs text-red-600">{opencvError}</p>
+                    </div>
+                  )}
+
+                  {/* OpenCV loading spinner — only while idle and before any error. */}
+                  {!opencvReady && !opencvError && appState === "idle" && (
                     <div className="mt-4 text-center">
                       <Loader2 className="size-4 mx-auto text-[#6a7282] animate-spin mb-1" />
                       <p className="text-xs text-[#6a7282]">Loading OpenCV.js WASM...</p>
