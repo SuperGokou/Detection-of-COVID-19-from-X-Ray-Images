@@ -2,6 +2,7 @@
  * TensorFlow.js model loading, caching, and inference manager.
  */
 import * as tf from "@tensorflow/tfjs";
+import type { SourceRoutingDecision } from "@/lib/source-router";
 
 export interface ModelConfig {
   id: string;
@@ -26,6 +27,39 @@ export const MODEL_CONFIGS: Record<string, ModelConfig> = {
     inputShape: [1, 224, 224, 1],
     estimatedSizeMB: 2.7,
     gradCamTargetLayer: "activation_3", // Last ReLU before GAP (14x14x256)
+  },
+  "source-covidgr-custom-cnn": {
+    id: "source-covidgr-custom-cnn",
+    displayName: "COVIDGR Custom CNN",
+    description:
+      "A source-specialist Custom CNN trained on COVIDGR P/N images.",
+    path: "models/source-covidgr-custom-cnn/model.json",
+    colorMode: "grayscale",
+    inputShape: [1, 224, 224, 1],
+    estimatedSizeMB: 2.7,
+    gradCamTargetLayer: "activation_3",
+  },
+  "source-covidgr-densenet121": {
+    id: "source-covidgr-densenet121",
+    displayName: "COVIDGR DenseNet121",
+    description:
+      "A source-specialist DenseNet121 trained on COVIDGR P/N images.",
+    path: "models/source-covidgr-densenet121/model.json",
+    colorMode: "rgb",
+    inputShape: [1, 224, 224, 3],
+    estimatedSizeMB: 15,
+    gradCamTargetLayer: "relu",
+  },
+  "source-covidgr-resnet50": {
+    id: "source-covidgr-resnet50",
+    displayName: "COVIDGR ResNet50",
+    description:
+      "A source-specialist ResNet50 trained on COVIDGR P/N images.",
+    path: "models/source-covidgr-resnet50/model.json",
+    colorMode: "rgb",
+    inputShape: [1, 224, 224, 3],
+    estimatedSizeMB: 50,
+    gradCamTargetLayer: "conv5_block3_out",
   },
   densenet121: {
     id: "densenet121",
@@ -58,6 +92,8 @@ export interface PredictionResult {
   prediction: "POSITIVE" | "NEGATIVE";
   /** Confidence as a percentage (0-100) */
   confidence: number;
+  /** Optional source routing metadata when automatic source selection is used */
+  routing?: SourceRoutingDecision;
 }
 
 type ProgressCallback = (progress: number) => void;

@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 
 import { MODEL_CONFIGS } from "@/lib/model-manager";
+import { AUTO_SOURCE_OPTIONS } from "@/lib/source-router";
 
 interface ModelSelectorProps {
   selectedModel: string;
@@ -20,6 +21,11 @@ export function ModelSelector({
           onChange={(e) => onModelChange(e.target.value)}
           className="w-full h-10 appearance-none rounded-lg border border-[#d1d5dc] bg-white px-3 pr-10 text-sm text-[#1e1e1e] outline-none focus:border-[#a51c30] focus:ring-1 focus:ring-[#a51c30] cursor-pointer"
         >
+          {AUTO_SOURCE_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
           {Object.values(MODEL_CONFIGS).map((config) => (
             <option key={config.id} value={config.id}>
               {config.displayName} (~{config.estimatedSizeMB} MB, {config.colorMode === "grayscale" ? "Grayscale" : "RGB"})

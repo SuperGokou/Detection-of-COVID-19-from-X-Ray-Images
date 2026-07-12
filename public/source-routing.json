@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "generatedAt": "2026-07-12T00:00:00.000Z",
+  "imageSize": 224,
+  "features": ["mean", "std", "entropy", "edgeDensity", "gradientMean"],
+  "profiles": [
+    {
+      "id": "brixia",
+      "displayName": "Brixia",
+      "description": "DICOM COVID-positive training source from the Brixia dataset.",
+      "defaultModelId": "resnet50",
+      "models": {
+        "custom-cnn": "custom-cnn",
+        "densenet121": "densenet121",
+        "resnet50": "resnet50"
+      },
+      "sampleCount": 300,
+      "featureMean": {
+        "mean": 0.406801,
+        "std": 0.159596,
+        "entropy": 0.804619,
+        "edgeDensity": 0.008187,
+        "gradientMean": 0.026469
+      },
+      "featureStd": {
+        "mean": 0.149597,
+        "std": 0.049376,
+        "entropy": 0.07887,
+        "edgeDensity": 0.007102,
+        "gradientMean": 0.008056
+      }
+    },
+    {
+      "id": "prunecxr",
+      "displayName": "PruneCXR / NIH",
+      "description": "Healthy negative chest X-ray source used for training negatives.",
+      "defaultModelId": "densenet121",
+      "models": {
+        "custom-cnn": "custom-cnn",
+        "densenet121": "densenet121",
+        "resnet50": "resnet50"
+      },
+      "sampleCount": 300,
+      "featureMean": {
+        "mean": 0.529031,
+        "std": 0.236935,
+        "entropy": 0.911622,
+        "edgeDensity": 0.009996,
+        "gradientMean": 0.036974
+      },
+      "featureStd": {
+        "mean": 0.094557,
+        "std": 0.040231,
+        "entropy": 0.050155,
+        "edgeDensity": 0.007072,
+        "gradientMean": 0.008405
+      }
+    },
+    {
+      "id": "covidgr",
+      "displayName": "COVIDGR",
+      "description": "External Spanish hospital validation source with positive and negative labels.",
+      "defaultModelId": "source-covidgr-custom-cnn",
+      "models": {
+        "custom-cnn": "source-covidgr-custom-cnn",
+        "densenet121": "source-covidgr-densenet121",
+        "resnet50": "source-covidgr-resnet50"
+      },
+      "sampleCount": 300,
+      "featureMean": {
+        "mean": 0.527701,
+        "std": 0.230302,
+        "entropy": 0.902748,
+        "edgeDensity": 0.002899,
+        "gradientMean": 0.035954
+      },
+      "featureStd": {
+        "mean": 0.057051,
+        "std": 0.027829,
+        "entropy": 0.03836,
+        "edgeDensity": 0.003869,
+        "gradientMean": 0.004962
+      }
+    }
+  ]
+}

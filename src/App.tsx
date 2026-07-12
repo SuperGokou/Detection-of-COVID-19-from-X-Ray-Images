@@ -17,6 +17,7 @@ import { ImageUpload } from "@/components/ImageUpload";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useClassifier } from "@/hooks/useClassifier";
+import { isAutoSourceRouting } from "@/lib/source-router";
 
 function StatCard({
   icon,
@@ -68,7 +69,6 @@ export default function App() {
 
   const imageDisplayRef = useRef<HTMLDivElement>(null);
 
-  // Show the appropriate canvas: heatmap overlay when active, else CLAHE/original
   useEffect(() => {
     if (imageDisplayRef.current) {
       imageDisplayRef.current.innerHTML = "";
@@ -98,21 +98,22 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-[#f3f3f3]">
       <Header />
 
-      {/* Hero Section */}
       <section className="bg-white border-b border-[#e5e7eb] px-8 pt-10 pb-10">
         <div className="max-w-[1200px] mx-auto flex gap-8 items-start">
           <div className="flex-1 max-w-[560px]">
             <div className="inline-flex items-center gap-2 bg-[#eff6ff] rounded-full px-3 py-1 mb-4">
               <Info className="size-4 text-[#0579b8]" />
-              <span className="text-sm text-[#0579b8]">Research Sandbox Environment</span>
+              <span className="text-sm text-[#0579b8]">
+                Research Sandbox Environment
+              </span>
             </div>
             <h2 className="text-[30px] font-bold text-[#1e1e1e] leading-tight mb-4">
               Deploy and benchmark deep learning models for rapid COVID-19 detection.
             </h2>
             <p className="text-lg text-[#4a5565] leading-relaxed">
-              A collaborative platform designed to standardize the evaluation of AI models
-              on chest radiography. Upload anonymized DICOM/JPEG data to benchmark accuracy
-              and inference speed.
+              A collaborative platform designed to standardize the evaluation of
+              AI models on chest radiography. Upload anonymized DICOM/JPEG data
+              to benchmark accuracy and inference speed.
             </p>
           </div>
 
@@ -139,15 +140,14 @@ export default function App() {
         </div>
       </section>
 
-      {/* Main Content: Two-Column Layout */}
       <main className="flex-1 px-8 py-8">
         <div className="max-w-[1200px] mx-auto flex gap-8 items-start">
-          {/* Left Column: Model Configuration */}
           <div className="w-[380px] shrink-0 flex flex-col gap-6">
-            {/* Config Card */}
             <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-sm">
               <div className="px-6 py-4 border-b border-[#f3f4f6]">
-                <h3 className="text-lg font-bold text-[#1e1e1e]">Model Configuration</h3>
+                <h3 className="text-lg font-bold text-[#1e1e1e]">
+                  Model Configuration
+                </h3>
               </div>
               <div className="px-6 py-6 flex flex-col gap-4">
                 <ModelSelector
@@ -176,34 +176,38 @@ export default function App() {
               </div>
             </div>
 
-            {/* Privacy Notice */}
             <div className="bg-white border border-[#e5e7eb] rounded-lg shadow-sm px-6 py-5">
               <div className="flex gap-3">
                 <Info className="size-5 text-[#0579b8] shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-sm font-bold text-[#0579b8]">Privacy Notice</p>
+                  <p className="text-sm font-bold text-[#0579b8]">
+                    Privacy Notice
+                  </p>
                   <p className="text-xs text-[#0579b8]/80 mt-1 leading-relaxed">
-                    Uploaded images are processed in a volatile memory sandbox and are not
-                    permanently stored on our servers unless explicitly saved to your
-                    research cohort.
+                    Uploaded images are processed in a volatile memory sandbox
+                    and are not permanently stored on our servers unless
+                    explicitly saved to your research cohort.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Analysis & Visualization */}
           <div className="flex-1 bg-white border border-[#e5e7eb] rounded-lg shadow-sm min-h-[617px]">
             <div className="px-6 py-4 border-b border-[#f3f4f6]">
-              <h3 className="text-lg font-bold text-[#1e1e1e]">Analysis &amp; Visualization</h3>
+              <h3 className="text-lg font-bold text-[#1e1e1e]">
+                Analysis &amp; Visualization
+              </h3>
             </div>
             <div className="px-6 py-6">
               <div className="flex gap-6 h-[500px]">
-                {/* Left: Image Display */}
                 <div className="flex-1 flex flex-col">
                   <div className="flex-1 bg-[#101828] rounded-lg overflow-hidden flex items-center justify-center">
                     {hasImage ? (
-                      <div ref={imageDisplayRef} className="w-full h-full flex items-center justify-center" />
+                      <div
+                        ref={imageDisplayRef}
+                        className="w-full h-full flex items-center justify-center"
+                      />
                     ) : (
                       <div className="text-[#6a7282] text-sm">
                         No image loaded
@@ -218,7 +222,9 @@ export default function App() {
                       {heatmapLoading && (
                         <Loader2 className="size-4 text-[#a51c30] animate-spin" />
                       )}
-                      <span className="text-sm text-[#364153] whitespace-nowrap">Show Heatmap (Grad-CAM)</span>
+                      <span className="text-sm text-[#364153] whitespace-nowrap">
+                        Show Heatmap (Grad-CAM)
+                      </span>
                       <button
                         onClick={handleToggleHeatmap}
                         disabled={!result || heatmapLoading}
@@ -240,9 +246,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Right: Results Panel */}
                 <div className="flex-1 flex flex-col items-center justify-center">
-                  {/* Loading State */}
                   {isAnalyzing && (
                     <div className="text-center">
                       <Loader2 className="size-12 mx-auto text-[#a51c30] animate-spin mb-4" />
@@ -250,7 +254,9 @@ export default function App() {
                         {appState === "loading-model"
                           ? `Loading ${currentConfig.displayName}...`
                           : appState === "preprocessing"
-                            ? "Preprocessing image..."
+                            ? isAutoSourceRouting(selectedModel)
+                              ? "Preprocessing and routing image..."
+                              : "Preprocessing image..."
                             : "Running inference..."}
                       </p>
                       {appState === "loading-model" && (
@@ -264,11 +270,14 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* Result State */}
                   {appState === "result" && result && (
                     <div className="w-full max-w-xs text-center">
                       <Badge
-                        variant={result.prediction === "POSITIVE" ? "destructive" : "success"}
+                        variant={
+                          result.prediction === "POSITIVE"
+                            ? "destructive"
+                            : "success"
+                        }
                         className="text-lg px-4 py-2 mb-4"
                       >
                         {result.prediction}
@@ -298,36 +307,68 @@ export default function App() {
                           />
                         </div>
                         <div className="text-xs text-[#99a1af] pt-2 border-t border-[#f3f4f6]">
+                          {result.routing && (
+                            <>
+                              <p>
+                                Matched source:{" "}
+                                {result.routing.selectedSourceName}
+                              </p>
+                              <p>
+                                Route confidence:{" "}
+                                {(result.routing.confidence * 100).toFixed(1)}%
+                              </p>
+                              <p>
+                                Routed architecture:{" "}
+                                {result.routing.selectedArchitecture}
+                              </p>
+                            </>
+                          )}
                           <p>Model: {currentConfig.displayName}</p>
                           <p>Raw sigmoid: {result.probability.toFixed(6)}</p>
                           <p>Threshold: 0.5</p>
                         </div>
+                        {result.routing && (
+                          <div className="text-left text-xs text-[#6a7282] pt-2 border-t border-[#f3f4f6]">
+                            {result.routing.scores.slice(0, 3).map((score) => (
+                              <div
+                                key={score.sourceId}
+                                className="flex justify-between gap-3"
+                              >
+                                <span className="truncate">
+                                  {score.sourceName}
+                                </span>
+                                <span className="font-mono">
+                                  d={score.distance.toFixed(2)}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* Error State */}
                   {appState === "error" && (
                     <div className="text-center max-w-xs">
                       <AlertTriangle className="size-12 mx-auto text-red-500 mb-4" />
-                      <p className="text-lg text-[#101828] mb-2">Analysis Error</p>
+                      <p className="text-lg text-[#101828] mb-2">
+                        Analysis Error
+                      </p>
                       <p className="text-sm text-[#6a7282]">{errorMessage}</p>
                     </div>
                   )}
 
-                  {/* Idle State */}
                   {(appState === "idle" || appState === "ready") && !result && (
                     <div className="text-center">
                       <Activity className="size-12 mx-auto text-[#d1d5dc] mb-4" />
                       <p className="text-lg text-[#101828]">Ready to Analyze</p>
                       <p className="text-sm text-[#6a7282] mt-2 max-w-[280px]">
-                        Select a model and click "Run Analysis" to see prediction probabilities.
+                        Select a model and click "Run Analysis" to see
+                        prediction probabilities.
                       </p>
                     </div>
                   )}
 
-                  {/* OpenCV load error — shown whenever the load failed and
-                      OpenCV is not ready, independent of appState. */}
                   {!opencvReady && opencvError && (
                     <div className="mt-4 text-center max-w-[280px]">
                       <AlertTriangle className="size-5 mx-auto text-red-500 mb-1" />
@@ -335,11 +376,12 @@ export default function App() {
                     </div>
                   )}
 
-                  {/* OpenCV loading spinner — only while idle and before any error. */}
                   {!opencvReady && !opencvError && appState === "idle" && (
                     <div className="mt-4 text-center">
                       <Loader2 className="size-4 mx-auto text-[#6a7282] animate-spin mb-1" />
-                      <p className="text-xs text-[#6a7282]">Loading OpenCV.js WASM...</p>
+                      <p className="text-xs text-[#6a7282]">
+                        Loading OpenCV.js WASM...
+                      </p>
                     </div>
                   )}
                 </div>

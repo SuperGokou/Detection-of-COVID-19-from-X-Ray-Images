@@ -287,6 +287,27 @@ MODEL_SPECS = [
         "output_dir": "custom-cnn",
     },
     {
+        "name": "COVIDGR Source Model A",
+        "build_fn": build_custom_cnn,
+        "build_args": {"input_shape": (IMAGE_SIZE, IMAGE_SIZE, 1)},
+        "weight_file": "best_source_covidgr_custom_cnn.weights.h5",
+        "output_dir": "source-covidgr-custom-cnn",
+    },
+    {
+        "name": "COVIDGR DenseNet121 Source Model A",
+        "build_fn": build_densenet121,
+        "build_args": {"input_shape": (IMAGE_SIZE, IMAGE_SIZE, 3)},
+        "weight_file": "best_source_covidgr_densenet121_phase2.weights.h5",
+        "output_dir": "source-covidgr-densenet121",
+    },
+    {
+        "name": "COVIDGR ResNet50 Source Model A",
+        "build_fn": build_resnet50,
+        "build_args": {"input_shape": (IMAGE_SIZE, IMAGE_SIZE, 3)},
+        "weight_file": "best_source_covidgr_resnet50_phase2.weights.h5",
+        "output_dir": "source-covidgr-resnet50",
+    },
+    {
         "name": "DenseNet121",
         "build_fn": build_densenet121,
         "build_args": {"input_shape": (IMAGE_SIZE, IMAGE_SIZE, 3)},

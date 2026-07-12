@@ -2,12 +2,20 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import * as tf from "@tensorflow/tfjs";
 import { preprocessImage, waitForOpenCV } from "@/lib/preprocessing";
 import { modelManager, MODEL_CONFIGS } from "@/lib/model-manager";
+import {
+  AUTO_SOURCE_CNN_ID,
+  getAutoSourceArchitecture,
+  isAutoSourceRouting,
+  sourceRouter,
+  type SourceRoutingDecision,
+} from "@/lib/source-router";
 import { computeGradCAM, applyJetColormap, blendHeatmap } from "@/lib/gradcam";
 import type { AppState, PredictionResult } from "@/types";
 import { SAMPLE_IMAGE_URL } from "@/constants";
 
 export function useClassifier() {
-  const [selectedModel, setSelectedModel] = useState("custom-cnn");
+  const [selectedModel, setSelectedModel] = useState(AUTO_SOURCE_CNN_ID);
+  const [activeModelId, setActiveModelId] = useState("custom-cnn");
   const [appState, setAppState] = useState<AppState>("idle");
   const [loadProgress, setLoadProgress] = useState(0);
   const [result, setResult] = useState<PredictionResult | null>(null);
@@ -21,20 +29,18 @@ export function useClassifier() {
   const [opencvError, setOpencvError] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Grad-CAM state
   const [heatmapCanvas, setHeatmapCanvas] = useState<HTMLCanvasElement | null>(
     null,
   );
   const [showHeatmap, setShowHeatmap] = useState(false);
   const [heatmapLoading, setHeatmapLoading] = useState(false);
 
-  // Keep the last preprocessed tensor data for Grad-CAM reuse
   const lastTensorRef = useRef<{
     data: Float32Array;
     shape: [number, number, number, number];
   } | null>(null);
 
-  const currentConfig = MODEL_CONFIGS[selectedModel]!;
+  const currentConfig = MODEL_CONFIGS[activeModelId]!;
 
   useEffect(() => {
     waitForOpenCV()
@@ -58,33 +64,95 @@ export function useClassifier() {
         setHeatmapCanvas(null);
         setShowHeatmap(false);
 
-        // Preprocess first so the image displays even if model loading fails
+        const isAutoRouting = isAutoSourceRouting(selectedModel);
+        const selectedArchitecture = getAutoSourceArchitecture(selectedModel);
+
         setAppState("preprocessing");
-        const config = MODEL_CONFIGS[selectedModel]!;
-        const preprocessed = await preprocessImage(file, config.colorMode);
+        const initialColorMode = isAutoRouting
+          ? "grayscale"
+          : MODEL_CONFIGS[selectedModel]!.colorMode;
+        const initialPreprocessed = await preprocessImage(file, initialColorMode);
+        let modelId = selectedModel;
+        let preprocessed = initialPreprocessed;
+        let currentColorMode = initialColorMode;
+        let routingDecision: SourceRoutingDecision | undefined;
+
+        if (isAutoRouting) {
+          const routing = await sourceRouter.route(
+            initialPreprocessed.originalCanvas,
+            selectedArchitecture,
+          );
+          routingDecision = routing;
+          modelId = MODEL_CONFIGS[routing.selectedModelId]
+            ? routing.selectedModelId
+            : "custom-cnn";
+          setActiveModelId(modelId);
+
+          const routedConfig = MODEL_CONFIGS[modelId]!;
+          if (routedConfig.colorMode !== initialColorMode) {
+            preprocessed = await preprocessImage(file, routedConfig.colorMode);
+            currentColorMode = routedConfig.colorMode;
+          }
+        } else {
+          setActiveModelId(modelId);
+        }
+
         setOriginalCanvas(preprocessed.originalCanvas);
         setClaheCanvas(preprocessed.claheCanvas);
 
-        // Store tensor data for later Grad-CAM computation
         lastTensorRef.current = {
           data: preprocessed.tensorData,
           shape: preprocessed.shape,
         };
 
-        if (!modelManager.isLoaded(selectedModel)) {
+        if (!modelManager.isLoaded(modelId)) {
           setAppState("loading-model");
           setLoadProgress(0);
-          await modelManager.loadModel(selectedModel, (progress) => {
-            setLoadProgress(Math.round(progress * 100));
-          });
+          try {
+            await modelManager.loadModel(modelId, (progress) => {
+              setLoadProgress(Math.round(progress * 100));
+            });
+          } catch (err) {
+            if (isAutoRouting && modelId !== selectedArchitecture) {
+              console.warn(
+                `Routed model ${modelId} failed to load; falling back to ${selectedArchitecture}.`,
+                err,
+              );
+              modelId = selectedArchitecture;
+              setActiveModelId(modelId);
+              const fallbackConfig = MODEL_CONFIGS[modelId]!;
+              if (fallbackConfig.colorMode !== currentColorMode) {
+                preprocessed = await preprocessImage(file, fallbackConfig.colorMode);
+                currentColorMode = fallbackConfig.colorMode;
+                setOriginalCanvas(preprocessed.originalCanvas);
+                setClaheCanvas(preprocessed.claheCanvas);
+                lastTensorRef.current = {
+                  data: preprocessed.tensorData,
+                  shape: preprocessed.shape,
+                };
+              }
+              setLoadProgress(0);
+              await modelManager.loadModel(modelId, (progress) => {
+                setLoadProgress(Math.round(progress * 100));
+              });
+            } else {
+              throw err;
+            }
+          }
         }
 
         setAppState("analyzing");
         const prediction = await modelManager.predict(
-          selectedModel,
+          modelId,
           preprocessed.tensorData,
           preprocessed.shape,
         );
+        if (routingDecision) {
+          prediction.routing = {
+            ...routingDecision,
+            selectedModelId: modelId,
+          };
+        }
         setResult(prediction);
         setAppState("result");
       } catch (err) {
@@ -97,18 +165,15 @@ export function useClassifier() {
     [selectedModel],
   );
 
-  /** Compute the Grad-CAM heatmap (lazy, called on first toggle). */
   const computeHeatmap = useCallback(() => {
-    const config = MODEL_CONFIGS[selectedModel];
-    const model = modelManager.getModel(selectedModel);
+    const config = MODEL_CONFIGS[activeModelId];
+    const model = modelManager.getModel(activeModelId);
     const tensorInfo = lastTensorRef.current;
 
     if (!config || !model || !tensorInfo) return;
 
     setHeatmapLoading(true);
 
-    // Use requestAnimationFrame to let the UI update (show spinner) before
-    // blocking the main thread with the gradient computation.
     requestAnimationFrame(() => {
       try {
         const inputTensor = tf.tensor(
@@ -135,9 +200,8 @@ export function useClassifier() {
         setHeatmapLoading(false);
       }
     });
-  }, [selectedModel, claheCanvas, originalCanvas]);
+  }, [activeModelId, claheCanvas, originalCanvas]);
 
-  /** Toggle heatmap visibility; computes on first toggle. */
   const handleToggleHeatmap = useCallback(() => {
     if (!result) return;
 
@@ -152,6 +216,11 @@ export function useClassifier() {
   const handleModelChange = useCallback(
     (modelId: string) => {
       setSelectedModel(modelId);
+      setActiveModelId(
+        isAutoSourceRouting(modelId)
+          ? getAutoSourceArchitecture(modelId)
+          : modelId,
+      );
       setResult(null);
       setOriginalCanvas(null);
       setClaheCanvas(null);
